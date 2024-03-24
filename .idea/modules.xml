@@ -3,6 +3,12 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LessonJava.iml" filepath="$PROJECT_DIR$/LessonJava.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chat_client1/chat_client.iml" filepath="$PROJECT_DIR$/chat_client1/chat_client.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chat_clients/chat_clients.iml" filepath="$PROJECT_DIR$/chat_clients/chat_clients.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chat_library/chat_library.iml" filepath="$PROJECT_DIR$/chat_library/chat_library.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chat_server/chat_server.iml" filepath="$PROJECT_DIR$/chat_server/chat_server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/chat_servers/chat_servers.iml" filepath="$PROJECT_DIR$/chat_servers/chat_servers.iml" />
+      <module fileurl="file://$PROJECT_DIR$/network/network.iml" filepath="$PROJECT_DIR$/network/network.iml" />
     </modules>
   </component>
 </project>

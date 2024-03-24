@@ -1,5 +1,7 @@
-package Level_2_Lesson_4;
+package gui;
 
+import core.ChatServer;
+import core.ChatServerListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -7,7 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class ServerGUI extends JFrame implements ActionListener,
-        Thread.UncaughtExceptionHandler {
+        Thread.UncaughtExceptionHandler, ChatServerListener {
 
     private static final int POS_X = 1000;
     private static final int POS_Y = 550;
@@ -47,7 +49,7 @@ public class ServerGUI extends JFrame implements ActionListener,
     public void actionPerformed(ActionEvent e) {
         Object src = e.getSource();
         if (src == btnStart) {
-            chatServer.start(11111);
+            chatServer.start(8189);
         } else if (src == btnStop) {
             //throw new RuntimeException("Hello from EDT!");
             chatServer.stop();
@@ -65,5 +67,10 @@ public class ServerGUI extends JFrame implements ActionListener,
                 e.getMessage(), ste[0]);
         JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
         System.exit(1);
+    }
+
+    @Override
+    public void onChatServerMsg(String msg) {
+
     }
 }

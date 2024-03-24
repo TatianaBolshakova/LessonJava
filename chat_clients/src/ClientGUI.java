@@ -1,15 +1,18 @@
-package Level_2_Lesson_4;
+
+
+import network.SocketThread;
+import network.SocketThreadListener;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.net.Socket;
 
 public class ClientGUI extends JFrame implements ActionListener,
-        Thread.UncaughtExceptionHandler {
+        Thread.UncaughtExceptionHandler, SocketThreadListener {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
@@ -30,6 +33,8 @@ public class ClientGUI extends JFrame implements ActionListener,
     private final JButton btnSend = new JButton("Send");
 
     private final JList<String> userList = new JList<>();
+    private boolean shownIoErrors = false;
+    private SocketThread socketThread;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -46,6 +51,7 @@ public class ClientGUI extends JFrame implements ActionListener,
         setLocationRelativeTo(null);
         setSize(WIDTH, HEIGHT);
         log.setEditable(false);
+        log.setLineWrap(true);
         JScrollPane scrollLog = new JScrollPane(log);
         JScrollPane scrollUsers = new JScrollPane(userList);
         String[] users = {"user1", "user2", "user3", "user4", "user5", "user6",
@@ -55,6 +61,8 @@ public class ClientGUI extends JFrame implements ActionListener,
         cbAlwaysOnTop.addActionListener(this);
         btnSend.addActionListener(this);
         tfMessage.addActionListener(this);
+        btnLogin.addActionListener(this);
+        btnDisconnect.addActionListener(this);
 
         panelTop.add(tfIPAddress);
         panelTop.add(tfPort);
@@ -70,6 +78,7 @@ public class ClientGUI extends JFrame implements ActionListener,
         add(scrollUsers, BorderLayout.EAST);
         add(panelTop, BorderLayout.NORTH);
         add(panelBottom, BorderLayout.SOUTH);
+        panelBottom.setVisible(false);
 
         setVisible(true);
     }
@@ -81,54 +90,113 @@ public class ClientGUI extends JFrame implements ActionListener,
             setAlwaysOnTop(cbAlwaysOnTop.isSelected());
         } else if (src == btnSend || src == tfMessage) {
             sendMessage();
+        } else if (src == btnLogin) {
+            connect();
+        } else if (src == btnDisconnect) {
+            socketThread.close();
         } else {
             throw new RuntimeException("Undefined source: " + src);
         }
     }
 
-    //отправка сообщения
-    private void sendMessage() {
-        String message = tfMessage.getText();
-        String username = tfLogin.getText();
-        if ("".equals(message)) return;
-        tfMessage.setText(null);
-        addLog(String.format("%s: %s", username, message));
-        sendToFile(message, username);
-    }
-
-    //сохранение сообщений в файлах
-    int count = 0;
-    private void sendToFile(String message, String username) {
+    private void connect() {
         try {
-            PrintStream ps = new PrintStream(new FileOutputStream(count + "log_message.txt"));
-            count++;
-            ps.println(username + "- " + message +"\n");
-            ps.close();
+            Socket s = new Socket(tfIPAddress.getText(), Integer.parseInt(tfPort.getText()));
+            socketThread = new SocketThread(this, "Client", s);
 
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
+            showException(Thread.currentThread(), e);
         }
     }
 
-    // добавление сообщения в лог
-    private void addLog(String message) {
-        if ("".equals(message)) return;
+    private void sendMessage() {
+        String msg = tfMessage.getText();
+//        String username = tfLogin.getText();
+        if ("".equals(msg)) return;
+        tfMessage.setText(null);
+        tfMessage.grabFocus();
+        socketThread.sendMessage(msg);
+//        putLog(String.format("%s: %s", username, msg));
+//        wrtMsgToLogFile(msg, username);
+    }
+
+    private void wrtMsgToLogFile(String msg, String username) {
+        try (FileWriter out = new FileWriter("log.txt", true)) {
+            out.write(username + ": " + msg + "\n");
+            out.flush();
+        } catch (IOException e) {
+            if (!shownIoErrors) {
+                shownIoErrors = true;
+                showException(Thread.currentThread(), e);
+            }
+        }
+    }
+
+    private void putLog(String msg) {
+        if ("".equals(msg)) return;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                log.append(message+ "\n");
+                log.append(msg + "\n");
+                log.setCaretPosition(log.getDocument().getLength());
             }
         });
+    }
+
+    private void showException(Thread t, Throwable e) {
+        String msg;
+        StackTraceElement[] ste = e.getStackTrace();
+        if (ste.length == 0)
+            msg = "Empty Stacktrace";
+        else {
+            msg = String.format("Exception in thread \"%s\" %s: %s\n\tat %s",
+                    t.getName(), e.getClass().getCanonicalName(), e.getMessage(), ste[0]);
+            JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
+        }
+        JOptionPane.showMessageDialog(null, msg, "Exception", JOptionPane.ERROR_MESSAGE);
     }
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
         e.printStackTrace();
-        StackTraceElement[] ste = e.getStackTrace();
-        String msg = String.format("Exception in thread \"%s\" %s: %s\n\tat %s",
-                t.getName(), e.getClass().getCanonicalName(),
-                e.getMessage(), ste[0]);
-        JOptionPane.showMessageDialog(this, msg, "Exception", JOptionPane.ERROR_MESSAGE);
+        showException(t, e);
         System.exit(1);
     }
+
+    /**
+     * Socket thread listener methods implementation
+     * */
+
+    @Override
+    public void onSocketStart(SocketThread thread, Socket socket) {
+        putLog("Socket created");
+    }
+
+    @Override
+    public void onSocketStop(SocketThread thread) {
+
+        putLog("Socket stopped");
+        panelBottom.setVisible(false);
+        panelTop.setVisible(true);
+    }
+
+    @Override
+    public void onSocketReady(SocketThread thread, Socket socket) {
+
+        putLog("Socket ready");
+        panelBottom.setVisible(true);
+        panelTop.setVisible(false);
+    }
+
+    @Override
+    public void onReceiveString(SocketThread thread, Socket socket, String msg) {
+        putLog(msg);
+    }
+
+    @Override
+    public void onSocketException(SocketThread thread, Exception exception) {
+        exception.printStackTrace();
+    }
+
 }
