@@ -1,5 +1,5 @@
 package core;
 
 public interface ChatServerListener {
-    void onChatServerMsg(String mag);
+    void onChatServerMessage(String mag);
 }

@@ -1,5 +1,4 @@
-
-
+import library.Protocol;
 import network.SocketThread;
 import network.SocketThreadListener;
 
@@ -10,12 +9,16 @@ import java.awt.event.ActionListener;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Objects;
 
 public class ClientGUI extends JFrame implements ActionListener,
         Thread.UncaughtExceptionHandler, SocketThreadListener {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
+    private final DateFormat DATE_FORMAT = new SimpleDateFormat("[HH:mm:ss] ");
 
     private final JTextArea log = new JTextArea();
 
@@ -23,7 +26,7 @@ public class ClientGUI extends JFrame implements ActionListener,
     private final JTextField tfIPAddress = new JTextField("127.0.0.1");
     private final JTextField tfPort = new JTextField("8189");
     private final JCheckBox cbAlwaysOnTop = new JCheckBox("Always on top");
-    private final JTextField tfLogin = new JTextField("Tatiana");
+    private final JTextField tfLogin = new JTextField("ivan");
     private final JPasswordField tfPassword = new JPasswordField("123");
     private final JButton btnLogin = new JButton("Login");
 
@@ -73,12 +76,12 @@ public class ClientGUI extends JFrame implements ActionListener,
         panelBottom.add(btnDisconnect, BorderLayout.WEST);
         panelBottom.add(tfMessage, BorderLayout.CENTER);
         panelBottom.add(btnSend, BorderLayout.EAST);
+        panelBottom.setVisible(false);
 
         add(scrollLog, BorderLayout.CENTER);
         add(scrollUsers, BorderLayout.EAST);
         add(panelTop, BorderLayout.NORTH);
         add(panelBottom, BorderLayout.SOUTH);
-        panelBottom.setVisible(false);
 
         setVisible(true);
     }
@@ -175,23 +178,30 @@ public class ClientGUI extends JFrame implements ActionListener,
 
     @Override
     public void onSocketStop(SocketThread thread) {
-
         putLog("Socket stopped");
         panelBottom.setVisible(false);
         panelTop.setVisible(true);
+
     }
 
     @Override
     public void onSocketReady(SocketThread thread, Socket socket) {
-
         putLog("Socket ready");
+        socketThread.sendMessage(Protocol.getAuthRequest(
+                tfLogin.getText(), new String(tfPassword.getPassword())));
         panelBottom.setVisible(true);
         panelTop.setVisible(false);
     }
 
     @Override
     public void onReceiveString(SocketThread thread, Socket socket, String msg) {
-        putLog(msg);
+        String[] arr = msg.split(Protocol.DELIMITER);
+        String msgType = arr[0];
+        if (Objects.equals(msgType, Protocol.TYPE_BROADCAST)){
+            putLog(String.format("%s%s: %s",
+                    DATE_FORMAT.format(Long.parseLong(arr[1])),
+                    arr[2], arr[3]));
+        }
     }
 
     @Override
